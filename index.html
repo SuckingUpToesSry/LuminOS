@@ -9,8 +9,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%238b9dff'/%3E%3Cstop offset='1' stop-color='%23c58bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='6' fill='white' fill-opacity='.92'/%3E%3C/svg%3E" />
 <link rel="manifest" href="assets/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="assets/icon.svg" />
-<link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/apps.css" />
+<link rel="stylesheet" href="css/style.css?v=1.0.1" />
+<link rel="stylesheet" href="css/apps.css?v=1.0.1" />
 </head>
 <body>
 
@@ -154,6 +154,75 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js"></script>
+<script>
+/* ── Guardião do boot (sem módulos): garante que a tela nunca trave em "LuminOS".
+      Se os módulos ES não carregarem (404, cache velho, CSP, proxy), avisa e tenta o bundle único. */
+(function () {
+  var started = false, fallbackTried = false;
+  window.__LUMIN_OK = function () { started = true; hide(); };
+  var box = null;
+  function hide() {
+    if (box && box.parentNode) box.parentNode.removeChild(box);
+    box = null;
+  }
+  function panel(detail) {
+    if (box || started) return;
+    box = document.createElement('div');
+    box.setAttribute('role', 'alertdialog');
+    box.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:20px;' +
+      'background:#0b0d12;color:#e9ebf2;font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+    box.innerHTML =
+      '<div style="max-width:460px;width:100%">' +
+      '<div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(140deg,#6f8bff,#b07bff);margin-bottom:16px"></div>' +
+      '<h1 style="font-size:19px;margin:0 0 6px;letter-spacing:-.02em">O LuminOS não conseguiu iniciar</h1>' +
+      '<p style="color:#a7adbd;margin:0 0 14px;font-size:13px">Os arquivos do sistema não carregaram neste navegador. ' +
+      'Quase sempre é cache antigo. Tente as opções abaixo, nesta ordem:</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
+      '<button id="lum-reload" style="padding:9px 14px;border-radius:10px;border:0;cursor:pointer;' +
+      'background:linear-gradient(140deg,#6f8bff,#b07bff);color:#fff;font:inherit;font-size:13px">Recarregar</button>' +
+      '<button id="lum-hard" style="padding:9px 14px;border-radius:10px;cursor:pointer;background:#191d26;' +
+      'color:#e9ebf2;border:1px solid rgba(255,255,255,.14);font:inherit;font-size:13px">Limpar cache e recarregar</button>' +
+      '</div>' +
+      '<p style="font-size:11.5px;color:#6f7686;margin:0">Se persistir: abra o console (F12) e veja a mensagem de erro' +
+      (detail ? '<br><code style="color:#ff8484;word-break:break-word">' + String(detail).slice(0, 220) + '</code>' : '') +
+      '</p></div>';
+    document.body.appendChild(box);
+    box.querySelector('#lum-reload').onclick = function () { location.reload(); };
+    box.querySelector('#lum-hard').onclick = function () {
+      try {
+        localStorage.removeItem('luminos:onboarded');
+        if (window.caches) caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); })
+          .then(function () { if (navigator.serviceWorker) return navigator.serviceWorker.getRegistrations(); })
+          .then(function (rs) { return Promise.all((rs || []).map(function (r) { return r.unregister(); })); })
+          .then(function () { location.reload(true); });
+        else location.reload();
+      } catch (e) { location.reload(); }
+    };
+  }
+  function fallback() {
+    if (started || fallbackTried) return;
+    fallbackTried = true;
+    var s = document.createElement('script');
+    s.src = 'js/luminos.bundle.js?v=1.0.1';
+    s.onerror = function () { panel('js/main.js e js/luminos.bundle.js não puderam ser carregados (404).'); };
+    document.body.appendChild(s);
+  }
+  window.addEventListener('error', function (e) {
+    if (e && e.target && e.target.tagName === 'SCRIPT') panel('Falha ao carregar ' + (e.target.src || 'script'));
+    else if (e && e.message) window.__LUMIN_ERR = e.message;
+  }, true);
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { if (!started) fallback(); }, 2600);
+    setTimeout(function () { if (!started) panel(window.__LUMIN_ERR || 'Tempo esgotado ao carregar os módulos.'); }, 9000);
+  });
+})();
+</script>
+<script type="module" src="js/main.js?v=1.0.1"></script>
+<noscript>
+  <div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0d12;color:#e9ebf2;
+    font:14px system-ui,sans-serif;padding:24px;text-align:center">
+    O LuminOS precisa de JavaScript ativado para funcionar.
+  </div>
+</noscript>
 </body>
 </html>

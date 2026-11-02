@@ -1,5 +1,11 @@
 /* ============================================================
    LuminOS — registro central de apps
+
+   Importante: as referências aos apps são resolvidas de forma
+   PREGUIÇOSA (na primeira chamada), nunca no topo do módulo.
+   Isso evita "Cannot access 'X' before initialization" quando
+   existe ciclo de imports (registry → app → registry), que é o
+   que acontecia ao carregar os módulos nativos no navegador.
    ============================================================ */
 
 import { browserApp } from './apps/browser.js';
@@ -15,48 +21,66 @@ import { chatApp, clockApp, calendarApp } from './apps/social.js';
 import { cameraApp, linksApp, feedbackApp } from './apps/extras.js';
 import { webAppMount, aboutApp } from './apps/webapp.js';
 
-export const version = '1.0.0';
+export const version = '1.0.1';
 
-const APPS = [
-  browserApp, notesApp, aiApp, gamesApp, soundboardApp, musicApp, photosApp,
-  storeApp, settingsApp, filesApp, terminalApp, calculatorApp, paintApp,
-  codeApp, creatorApp, chatApp, clockApp, calendarApp, cameraApp, linksApp,
-  feedbackApp, aboutApp,
-];
+/** Só é chamada em tempo de execução (pós-avaliação dos módulos). */
+function appList() {
+  return [
+    browserApp, notesApp, aiApp, gamesApp, soundboardApp, musicApp, photosApp,
+    storeApp, settingsApp, filesApp, terminalApp, calculatorApp, paintApp,
+    codeApp, creatorApp, chatApp, clockApp, calendarApp, cameraApp, linksApp,
+    feedbackApp, aboutApp,
+  ];
+}
 
 class Registry {
-  constructor() { this.map = new Map(); }
+  constructor() {
+    this.map = new Map();
+    this.ready = false;
+  }
+  #ensure() {
+    if (this.ready) return;
+    this.ready = true; // marca antes para evitar reentrância
+    for (const app of appList()) {
+      if (app?.id) this.map.set(app.id, { ...app, size: app.size || { w: 720, h: 500 } });
+    }
+  }
   register(app) {
     if (!app?.id) throw new Error('app sem id');
     this.map.set(app.id, { ...app, size: app.size || { w: 720, h: 500 } });
   }
-  get(id) { return this.map.get(id); }
-  all() { return [...this.map.values()]; }
+  get(id) { this.#ensure(); return this.map.get(id); }
+  all() { this.#ensure(); return [...this.map.values()]; }
   dockApps() { return this.all().filter((a) => a.dock); }
+  customApps() {
+    try { return JSON.parse(localStorage.getItem('luminos:creator.apps') || '[]'); } catch { return []; }
+  }
   desktopApps() {
-    const out = this.all().filter((a) => a.desktop);
-    const custom = JSON.parse(localStorage.getItem('luminos:creator.apps') || '[]');
-    return { core: out, custom };
+    return { core: this.all().filter((a) => a.desktop), custom: this.customApps() };
   }
   categories() { return [...new Set(this.all().map((a) => a.category || 'Outros'))]; }
 }
 
 export const registry = new Registry();
-APPS.forEach((a) => registry.register(a));
 export { webAppMount };
 
-/** resolve any icon id (including user-created web apps) to an app-like object */
+/** resolve qualquer id de ícone (inclusive web apps criados pelo usuário) */
 export function resolveApp(id) {
   const core = registry.get(id);
   if (core) return core;
-  if (id.startsWith('web:')) {
+  if (id?.startsWith('web:')) {
     const wid = id.slice(4);
-    const list = JSON.parse(localStorage.getItem('luminos:creator.apps') || '[]');
-    const w = list.find((x) => x.id === wid);
+    const w = registry.customApps().find((x) => x.id === wid);
     if (!w) return null;
     return {
-      id, name: w.name, glyph: 'globe', grad: [w.c1 || '#6f8bff', w.c2 || '#b07bff'], emoji: w.emoji,
-      category: 'Web', size: { w: 900, h: 620 }, custom: true,
+      id,
+      name: w.name,
+      glyph: 'globe',
+      grad: [w.c1 || '#6f8bff', w.c2 || '#b07bff'],
+      emoji: w.emoji,
+      category: 'Web',
+      size: { w: 900, h: 620 },
+      custom: true,
       mount: (body, api) => webAppMount(body, api, w),
     };
   }

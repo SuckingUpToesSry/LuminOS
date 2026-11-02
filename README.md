@@ -71,6 +71,13 @@ npx serve .
 php -S localhost:8080
 ```
 
+> **Modo de compatibilidade.** `js/luminos.bundle.js` é um bundle único (módulos já resolvidos) usado
+> automaticamente como *fallback* se os módulos ES não carregarem — útil em proxies/CDNs exóticos.
+> Para regenerá-lo depois de mudar o código: `npx esbuild js/main.js --bundle --format=iife --minify --outfile=js/luminos.bundle.js`.
+
+> **Viu a tela de boot parada?** Abra `.../?nosw=1` para limpar o cache do service worker, ou use o botão
+> “Limpar cache e recarregar” que aparece na própria página de erro.
+
 Depois abra <http://localhost:8080>.
 
 > Abrir o `index.html` direto pelo `file://` **não** funciona: módulos ES exigem um servidor (http/https).
@@ -138,6 +145,17 @@ Tudo fica em `localStorage` com prefixo `luminos:`. Nada é enviado para servido
 ## 🎨 Design
 
 Interface enxuta: muito espaço em branco, tipografia do sistema, bordas de 1px, vidro fosco discreto, uma única cor de destaque e movimento contido. Tokens em `:root` tornam qualquer mudança de tema trivial — os 6 temas são só 6 blocos de variáveis.
+
+## 🩺 Problemas conhecidos & recuperação
+
+| Sintoma | Causa | Solução |
+| --- | --- | --- |
+| Tela para no logo **LuminOS** | módulos ES não carregaram (cache antigo, 404 durante o deploy) | o app já tenta sozinho o bundle `js/luminos.bundle.js` e, se falhar, mostra um painel com **Recarregar** / **Limpar cache e recarregar** |
+| Cache “envenenado” após um deploy quebrado | service worker de versões antigas | abra `.../?nosw=1` uma vez (desregistra o SW e limpa o cache) |
+| Navegador muito antigo (sem `color-mix`) | CSS moderno | funciona normalmente; apenas algumas cores derivadas ficam no tom base |
+
+O `sw.js` usa **network-first** e só guarda respostas válidas (`200`, `type: basic`) — nunca serve HTML
+no lugar de um `.js`, que era o que antes travava o boot.
 
 ## 📄 Licença
 

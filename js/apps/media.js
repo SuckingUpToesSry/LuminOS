@@ -73,8 +73,7 @@ const TRACKS = [
 export const musicApp = {
   id: 'music', name: 'Música', glyph: 'music', grad: ['#31c9a3', '#1f8fd8'],
   size: { w: 640, h: 480 }, category: 'Mídia', dock: true, desktop: true, singleton: true,
-  mount(body) {
-    sound.refresh?.();
+  mount(body, api) {
     let idx = 0, playing = false, timer = null, step = 0;
     const ctxState = { seek: 0 };
 
@@ -177,12 +176,8 @@ export const musicApp = {
     [...bars.children].forEach((b) => { b.style.height = Math.round(rnd(25, 100)) + '%'; b.style.animationDelay = rnd(0, .6) + 's'; });
     renderList();
 
-    // cleanup when window closes
-    const obs = new MutationObserver(() => {
-      if (!wrap.isConnected) { stop(); obs.disconnect(); }
-    });
-    obs.observe(document.body, { childList: true, subtree: true });
-
+    // limpeza determinística ao fechar a janela
+    api?.onClose?.(() => stop());
     return {
       onClose() { stop(); },
     };
