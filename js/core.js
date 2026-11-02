@@ -109,6 +109,7 @@ export const accentPalette = [
   { id: 'amber',  c: '#f0a92e', c2: '#ff8a5b', name: 'Âmbar' },
   { id: 'rose',   c: '#f0709a', c2: '#ff9f7a', name: 'Rosé' },
   { id: 'slate',  c: '#8792a8', c2: '#b7c0d4', name: 'Grafite' },
+  { id: 'astolfo', c: '#ec6fa9', c2: '#c39bf7', name: 'Astolfo' },
 ];
 
 /* ── tiny sound engine (no assets) ────────────────────────── */

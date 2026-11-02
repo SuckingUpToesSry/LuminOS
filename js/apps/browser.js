@@ -2,8 +2,10 @@
    LuminOS — Browser (tabs, bookmarks, history, proxy mode)
    ============================================================ */
 
-import { $, h, uid, store, sound, esc } from '../core.js';
+import { $, h, uid, store, sound, esc, relTime } from '../core.js';
 import { icon } from '../icons.js';
+import { UV, WISP_ENDPOINTS, uvSettings, saveUvSettings, encodeUV, initUV } from '../../uv/config.mjs';
+import { ROOMS as CHAT_ROOMS, state as chatState, start as chatStart, send as chatSend, messages as chatMessages, onEvent as onChatEvent } from '../chat.js';
 
 const QUICK = [
   { name: 'Wikipedia', url: 'https://pt.wikipedia.org', c: ['#3b4c58', '#6b7c88'], g: 'W' },
@@ -27,6 +29,7 @@ const ENGINES = [
 ];
 
 const PROXIES = [
+  { id: 'ultraviolet', name: 'Ultraviolet (proxy real)', tpl: '{url}', uv: true },
   { id: 'none', name: 'Direto (sem proxy)', tpl: '{url}' },
   { id: 'allorigins', name: 'AllOrigins', tpl: 'https://api.allorigins.win/raw?url={enc}' },
   { id: 'corsproxy', name: 'corsproxy.io', tpl: 'https://corsproxy.io/?url={enc}' },
@@ -73,7 +76,8 @@ function proxyUrl(url, providerId) {
 }
 
 export function mountBrowser(body, api) {
-  const settings = store.get('browser.settings', { engine: 'duck', proxy: 'none', home: '' });
+  const settings = store.get('browser.settings', { engine: 'duck', proxy: 'ultraviolet', home: '' });
+  if (settings.proxy === undefined) settings.proxy = 'ultraviolet';
   api?.onArgs?.((a) => { if (a?.url) setTimeout(() => newTab(a.url), 0); });
   let tabs = [];
   let activeId = null;
@@ -93,6 +97,7 @@ export function mountBrowser(body, api) {
   const bHome = h('button.btn.icon.subtle', { html: icon('home'), title: 'Início' });
   const bStar = h('button.btn.icon.subtle', { html: icon('star'), title: 'Favoritar' });
   const bProxy = h('button.btn.icon.subtle', { html: icon('shield'), title: 'Modo proxy' });
+  const bChat = h('button.btn.icon.subtle', { html: icon('chat'), title: 'Chat Global (ao lado do navegador)' });
   const bMenu = h('button.btn.icon.subtle', { html: icon('dots'), title: 'Menu' });
 
   const urlInput = h('input', {
@@ -101,12 +106,120 @@ export function mountBrowser(body, api) {
   });
   const urlSec = h('span.sec', { html: icon('lock') });
   const urlBar = h('div.br-url', {}, urlSec, urlInput);
-  const bar = h('div.br-bar', {}, bBack, bFwd, bReload, bHome, urlBar, bStar, bProxy, bMenu);
+  const bar = h('div.br-bar', {}, bBack, bFwd, bReload, bHome, urlBar, bStar, bChat, bProxy, bMenu);
 
   const view = h('div.br-view');
+  const chatPanel = buildChatPanel();
+  const bodyRow = h('div', { style: { flex: '1', display: 'flex', minHeight: '0' } }, view, chatPanel.el);
   const load = h('div.br-load');
-  wrap.append(tabsRow, bar, view);
+  wrap.append(tabsRow, bar, bodyRow);
   body.append(wrap);
+
+  /* ── Chat Global (painel lateral do navegador) ──────── */
+  function buildChatPanel() {
+    const el = h('aside', { style: {
+      width: '0', flex: 'none', borderLeft: '1px solid var(--line)', background: 'var(--surface-2)',
+      display: 'flex', flexDirection: 'column', minHeight: '0', overflow: 'hidden',
+      transition: 'width .22s cubic-bezier(.2,.8,.2,1)',
+    } });
+    let open = false;
+    const roomChips = h('div', { style: { display: 'flex', gap: '4px', padding: '8px 8px 4px', flexWrap: 'wrap' } });
+    const list = h('div', { style: { flex: '1', overflow: 'auto', padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '7px' } });
+    const nickRow = h('div', { style: { display: 'flex', gap: '6px', padding: '8px' } });
+    const nickInput = h('input.input', { placeholder: 'Seu nome…', value: chatState.nick, style: { fontSize: '12px', padding: '6px 9px' } });
+    const msgInput = h('input.input', { placeholder: 'Mensagem…', style: { flex: '1', fontSize: '12px', padding: '7px 9px' } });
+    const sendBtn = h('button.btn.primary.icon', { html: icon('send'), title: 'Enviar' });
+    const status = h('div.tiny', { style: { padding: '0 10px 8px' }, text: 'conectando…' });
+
+    const setNick = () => {
+      chatState.nick = nickInput.value.trim() || 'anônimo';
+      nickRow.hidden = true;
+      renderMsgs();
+    };
+    nickInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') setNick(); });
+    nickRow.append(nickInput, h('button.btn.icon', { html: icon('check'), onclick: setNick }));
+    nickRow.hidden = !!chatState.nick;
+
+    function renderRooms() {
+      roomChips.innerHTML = '';
+      CHAT_ROOMS.forEach((r) => {
+        const b = h('button.chip', { text: '# ' + r.name, style: { cursor: 'pointer', padding: '3px 8px' } });
+        b.classList.toggle('accent', r.id === chatState.room);
+        b.onclick = () => { chatState.room = r.id; renderRooms(); renderMsgs(); };
+        roomChips.append(b);
+      });
+    }
+
+    function renderMsgs() {
+      list.innerHTML = '';
+      const msgs = chatMessages();
+      if (!msgs.length) {
+        list.append(h('div.empty', { style: { padding: '18px 6px' } }, h('div.big', { text: '💬' }),
+          h('p', { text: 'Ninguém falou nada ainda em #' + chatState.room + '.' })));
+      }
+      msgs.slice(-60).forEach((m) => {
+        const mine = m.who === chatState.nick;
+        list.append(h('div', { style: {
+          display: 'grid', gap: '1px', padding: '6px 8px', borderRadius: '9px',
+          background: mine ? 'color-mix(in srgb,var(--accent) 18%,transparent)' : 'var(--surface-3)',
+        } },
+          h('div', { style: { display: 'flex', gap: '6px', alignItems: 'baseline' } },
+            h('b', { style: { fontSize: '10.5px', color: mine ? 'var(--text)' : 'var(--accent)' }, text: m.who }),
+            h('span.tiny', { style: { fontSize: '9.5px', marginLeft: 'auto' }, text: relTime(m.ts) })),
+          h('div', { style: { fontSize: '12px', lineHeight: '1.45', wordBreak: 'break-word' }, text: m.text })));
+      });
+      list.scrollTop = list.scrollHeight;
+    }
+
+    async function sendMsg() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      if (!chatState.nick) { nickRow.hidden = false; nickInput.focus(); return; }
+      msgInput.value = '';
+      const res = await chatSend(text, { who: chatState.nick });
+      renderMsgs();
+      status.textContent = res.relay ? 'enviado · relay online' : 'salvo localmente · relay offline';
+      renderBadge();
+    }
+    sendBtn.onclick = sendMsg;
+    msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
+
+    const head = h('div', { style: {
+      display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 8px',
+      borderBottom: '1px solid var(--line)',
+    } },
+      h('span', { html: `<span class="logo-dot" style="width:8px;height:8px"></span>`, style: { display: 'flex' } }),
+      h('b', { style: { fontSize: '12px', flex: '1' }, text: 'Chat Global' }),
+      h('button.btn.subtle.icon', { html: icon('x'), title: 'Fechar', onclick: () => toggle(false) }));
+
+    el.append(head, roomChips, list, nickRow, h('div', { style: { display: 'flex', gap: '6px', padding: '0 8px 4px' } }, msgInput, sendBtn), status);
+
+    onChatEvent((evt, d) => {
+      if (!open) return;
+      if (evt === 'message' && d.roomId === chatState.room) renderMsgs();
+      if (evt === 'status') status.textContent = d.online ? 'relay online · mensagens ao vivo' : 'relay offline · modo local entre abas';
+      if (evt === 'clear') renderMsgs();
+    });
+
+    function toggle(next) {
+      open = next === undefined ? !open : next;
+      el.style.width = open ? '290px' : '0';
+      bChat.classList.toggle('primary', open);
+      if (open) {
+        chatStart(chatState.room);
+        renderRooms(); renderMsgs();
+        if (!chatState.nick) { nickRow.hidden = false; setTimeout(() => nickInput.focus(), 120); }
+        else setTimeout(() => msgInput.focus(), 120);
+      }
+    }
+    bChat.onclick = () => toggle();
+    return { el, toggle, renderMsgs, renderBadge };
+  }
+
+  function renderBadge() {
+    const n = chatMessages().length;
+    bChat.title = 'Chat Global' + (n ? ` · ${n} mensagens` : '');
+  }
 
   /* ── tab model ───────────────────────────────────────── */
   function newTab(url = '', { focus = true } = {}) {
@@ -153,35 +266,82 @@ export function mountBrowser(body, api) {
   }
 
   /* ── navigation ──────────────────────────────────────── */
-  function navigate(input, { addHistory = true } = {}) {
+  async function navigate(input, { addHistory = true } = {}) {
     const tab = active(); if (!tab) return;
     const r = resolveUrl(input, settings.engine);
     if (r.kind === 'blank') return showStart();
     if (addHistory) { tab.hist = tab.hist.slice(0, tab.idx + 1); tab.hist.push(r.url); tab.idx = tab.hist.length - 1; }
     tab.url = r.url;
     urlInput.value = r.url;
-    renderPage(tab);
+    await renderPage(tab);
     history.add(r.url, hostOf(r.url));
     if (r.kind === 'search') setTitle(tab, hostOf(r.url).replace('www.', '') + ' — busca');
   }
 
   function hostOf(u) { try { return new URL(u).host; } catch { return u; } }
 
-  function renderPage(tab) {
+  async function renderPage(tab) {
     view.innerHTML = '';
-    const useProxy = settings.proxy !== 'none';
-    const src = proxyUrl(tab.url, settings.proxy);
+    const mode = settings.proxy || 'ultraviolet';
 
     const prog = h('div.br-load');
+    const overlay = h('div.br-blocked', { hidden: true });
+    view.append(prog, overlay);
+    prog.style.width = '30%';
+
+    /* ── Ultraviolet: proxy real via service worker ────── */
+    if (mode === 'ultraviolet') {
+      const statusLine = h('div', {
+        style: {
+          position: 'absolute', left: '50%', bottom: '18px', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: '9px', padding: '9px 14px', borderRadius: '99px',
+          background: 'var(--glass-2)', border: '1px solid var(--line-strong)', boxShadow: 'var(--shadow-sm)',
+          fontSize: '12px', color: 'var(--text-2)', zIndex: '3', backdropFilter: 'blur(12px)',
+        },
+      }, h('span.spinner', {
+        style: { width: '12px', height: '12px', border: '2px solid var(--line-strong)', borderTopColor: 'var(--accent)', borderRadius: '50%', display: 'block' },
+      }), h('span', { text: 'Conectando ao proxy…' }));
+      view.append(statusLine);
+      bProxy.style.color = 'var(--accent)';
+
+      const boot = await initUV();
+      if (!boot.ok) {
+        statusLine.remove();
+        showUvError(tab, overlay, boot.error);
+        return;
+      }
+      statusLine.querySelector('span:last-child').textContent = 'Ultraviolet ativo · ' + new URL(tab.url).host;
+      const src = encodeUV(tab.url);
+      const frame = h('iframe', {
+        src, allow: 'fullscreen; autoplay; clipboard-read; clipboard-write; gamepad; pointer-lock',
+        referrerpolicy: 'no-referrer',
+      });
+      frame.setAttribute('title', tab.title);
+      tab.frame = frame;
+      view.append(frame);
+      let loaded = false;
+      frame.addEventListener('load', () => {
+        loaded = true;
+        prog.style.width = '100%';
+        setTimeout(() => { prog.style.opacity = '0'; prog.style.width = '0'; statusLine.remove(); }, 500);
+        navigator.serviceWorker?.addEventListener('message', () => {});
+      });
+      setTimeout(() => { statusLine.remove(); if (!loaded) prog.style.width = '100%'; }, 12000);
+      tab.uvFrame = frame;
+      return;
+    }
+
+    /* ── modos antigos (CORS proxies / direto) ─────────── */
+    const src = proxyUrl(tab.url, mode);
+    const useProxy = mode !== 'none';
     const frame = h('iframe', {
       src, referrerpolicy: 'no-referrer', allow: 'fullscreen; autoplay; clipboard-read; clipboard-write',
       sandbox: useProxy ? 'allow-scripts allow-same-origin allow-forms allow-popups' : null,
     });
     frame.setAttribute('title', tab.title);
     tab.frame = frame;
-    const overlay = h('div.br-blocked', { hidden: true });
-
-    view.append(prog, frame, overlay);
+    view.append(frame);
+    bProxy.style.color = mode === 'none' ? '' : 'var(--ok)';
     prog.style.width = '35%';
 
     let loaded = false;
@@ -189,35 +349,57 @@ export function mountBrowser(body, api) {
       loaded = true;
       prog.style.width = '100%';
       setTimeout(() => { prog.style.opacity = '0'; prog.style.width = '0'; }, 240);
-      // heuristic: same-origin about:blank-ish or empty means blocked
       try {
         const doc = frame.contentDocument;
         if (doc && doc.location && doc.location.href === 'about:blank') showBlocked();
-      } catch { /* cross-origin = good, real page */ }
+      } catch {}
     });
-    setTimeout(() => { if (!loaded) { prog.style.width = '100%'; } }, 2500);
+    setTimeout(() => { if (!loaded) prog.style.width = '100%'; }, 2500);
     setTimeout(() => { if (!loaded) showBlocked(); }, 7000);
 
     function showBlocked() {
       if (!overlay.hidden) return;
       overlay.hidden = false;
       overlay.innerHTML = '';
-      const card = h('.card', {},
-        h('.chip.accent', { html: 'Bloqueado pelo site' }),
+      overlay.append(h('.card', {},
+        h('.chip.accent', { text: 'Bloqueado pelo site' }),
         h('h3', { text: 'Este site não permite ser exibido em outro domínio' }),
-        h('p', { text: 'Alguns sites enviam cabeçalhos X-Frame-Options / CSP que impedem a exibição dentro do LuminOS. Você pode abrir em nova aba ou tentar um proxy.' }),
-        h('.row', { style: { justifyContent: 'center', marginTop: '6px' } },
-          h('button.btn.primary', {
-            html: icon('external') + ' Abrir em nova aba',
-            onclick: () => window.open(tab.url, '_blank', 'noopener'),
-          }),
-          h('button.btn', {
-            html: icon('shield') + ' Usar proxy',
-            onclick: () => { settings.proxy = settings.proxy === 'none' ? 'allorigins' : settings.proxy; store.set('browser.settings', settings); renderPage(tab); },
-          }),
-          h('button.btn.ghost', { text: 'Recarregar', onclick: () => renderPage(tab) })));
-      overlay.append(card);
+        h('p', { text: 'Alguns sites enviam X-Frame-Options/CSP que impedem iframes. O Ultraviolet resolve isso — ele reescreve as requisições no service worker.' }),
+        h('.row', { style: { justifyContent: 'center', marginTop: '6px', flexWrap: 'wrap' } },
+          h('button.btn.primary', { html: icon('shield') + ' Usar Ultraviolet', onclick: () => {
+            settings.proxy = 'ultraviolet'; store.set('browser.settings', settings); renderPage(tab);
+          } }),
+          h('button.btn', { html: icon('external') + ' Abrir fora', onclick: () => window.open(tab.url, '_blank', 'noopener') }))));
     }
+  }
+
+  function showUvError(tab, overlay, detail) {
+    overlay.hidden = false;
+    overlay.innerHTML = '';
+    const cfg = uvSettings();
+    const wispInput = h('input.input', { value: cfg.wisp, style: { fontSize: '11.5px', padding: '7px 10px' } });
+    overlay.append(h('.card', { style: { maxWidth: '420px' } },
+      h('.chip.accent', { style: { background: 'color-mix(in srgb,var(--danger) 18%,transparent)' }, text: 'Proxy indisponível' }),
+      h('h3', { text: 'O Ultraviolet não conseguiu iniciar' }),
+      h('p', { text: (detail || '') + ' — normalmente é o relay Wisp bloqueado ou o service worker ainda registrando. Ajude escolhendo outro relay:' }),
+      h('div', { style: { display: 'grid', gap: '6px', width: '100%', marginTop: '8px' } },
+        wispInput,
+        h('.row', { style: { gap: '6px', flexWrap: 'wrap' } },
+          ...WISP_ENDPOINTS.map((w) => h('button.btn.subtle.tiny', {
+            text: new URL(w).host, onclick: () => { wispInput.value = w; },
+          }))),
+        h('.row', { style: { gap: '8px', justifyContent: 'center', marginTop: '4px' } },
+          h('button.btn.primary', { text: 'Recarregar com este relay', onclick: async () => {
+            saveUvSettings({ wisp: wispInput.value.trim() });
+            const { resetUV } = await import('../../uv/config.mjs');
+            resetUV();
+            renderPage(tab);
+          } }),
+          h('button.btn', { html: icon('external') + ' Abrir fora', onclick: () => window.open(tab.url, '_blank', 'noopener') }),
+          h('button.btn.ghost', { text: 'Modo direto', onclick: () => {
+            settings.proxy = 'none'; store.set('browser.settings', settings); renderPage(tab);
+          } }))),
+      h('p.tiny', { text: 'Os relays Wisp são públicos e veem os domínios acessados. Evite logar em contas sensíveis por eles.' })));
   }
 
   function showStart() {
@@ -306,10 +488,10 @@ export function mountBrowser(body, api) {
     bStar.style.color = bookmarkStore.list().some((b) => b.url === t.url) ? 'var(--warn)' : '';
   };
   const toggleProxy = () => {
-    settings.proxy = settings.proxy === 'none' ? 'allorigins' : 'none';
+    settings.proxy = settings.proxy === 'ultraviolet' ? 'none' : 'ultraviolet';
     if (store.get('browser.proxy', null)) { /* noop */ }
     store.set('browser.settings', settings);
-    bProxy.style.color = settings.proxy === 'none' ? '' : 'var(--ok)';
+    bProxy.style.color = settings.proxy === 'none' ? '' : 'var(--accent)';
     const t = active(); if (t && t.url) renderPage(t);
   };
   bProxy.onclick = toggleProxy;
@@ -321,7 +503,26 @@ export function mountBrowser(body, api) {
         { label: 'Nova aba', icon: 'plus', action: () => newTab() },
         { label: 'Página inicial', icon: 'home', action: () => showStart() },
         { sep: true },
-        { label: settings.proxy === 'none' ? 'Ativar proxy' : 'Desativar proxy', icon: 'shield', action: toggleProxy },
+        { label: settings.proxy === 'ultraviolet' ? 'Desativar Ultraviolet' : 'Ativar Ultraviolet (proxy real)', icon: 'shield', action: toggleProxy },
+        { label: 'Relay Wisp do Ultraviolet…', icon: 'globe', action: () => {
+          import('../ui.js').then(({ modal }) => {
+            const cfg = uvSettings();
+            const inp = h('input.input', { value: cfg.wisp });
+            modal({
+              title: 'Relay Wisp', ok: 'Salvar',
+              body: [h('p.tiny', { text: 'O Ultraviolet usa um relay público (Wisp) para falar com os sites. Escolha um que responda na sua rede.' }),
+                h('.field', {}, h('span', { text: 'Endpoint' }), inp),
+                h('.row', { style: { gap: '6px', flexWrap: 'wrap' } },
+                  ...WISP_ENDPOINTS.map((w) => h('button.btn.subtle.tiny', { text: new URL(w).host, onclick: () => { inp.value = w; } })))],
+              onOk: async () => {
+                saveUvSettings({ wisp: inp.value.trim() });
+                const { resetUV } = await import('../../uv/config.mjs');
+                resetUV();
+                toast('Relay salvo — recarregue a página atual', { kind: 'ok' });
+              },
+            });
+          });
+        } },
         ...PROXIES.filter((p) => p.id !== 'none').map((p) => ({
           label: '  · ' + p.name, action: () => { settings.proxy = p.id; store.set('browser.settings', settings); bProxy.style.color = 'var(--ok)'; const t = active(); if (t?.url) renderPage(t); },
         })),
@@ -364,7 +565,7 @@ export function mountBrowser(body, api) {
     else if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); bFwd.onclick(); }
   });
 
-  bProxy.style.color = settings.proxy === 'none' ? '' : 'var(--ok)';
+  bProxy.style.color = settings.proxy === 'none' ? '' : 'var(--accent)';
   newTab(api?.args?.url || settings.home || '');
 
   return {

@@ -26,7 +26,7 @@ const GAMES = [
 ];
 
 export const gamesApp = {
-  id: 'games', name: 'Jogos', glyph: 'game', grad: ['#4ade80', '#14b8a6'],
+  id: 'classic-games', name: 'Clássicos', glyph: 'game', grad: ['#38bdf8', '#6366f1'],
   size: { w: 700, h: 560 }, category: 'Mídia', dock: true, desktop: true, singleton: true,
   mount(body, api) {
     body.innerHTML = '';

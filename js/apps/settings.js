@@ -29,6 +29,7 @@ const THEMES = [
   { id: 'nord', name: 'Nord' },
   { id: 'sand', name: 'Areia' },
   { id: 'glass', name: 'Vidro' },
+  { id: 'astolfo', name: 'Astolfo' },
 ];
 
 export const settingsApp = {
@@ -81,6 +82,7 @@ export const settingsApp = {
             dark: 'linear-gradient(140deg,#14171f,#0b0d12)', light: 'linear-gradient(140deg,#fff,#eceef3)',
             midnight: 'linear-gradient(140deg,#111a4a,#05060c)', nord: 'linear-gradient(140deg,#434c5e,#2e3440)',
             sand: 'linear-gradient(140deg,#fffdf9,#efe8dc)', glass: 'linear-gradient(140deg,#2a1f5e,#0d4d5c)',
+            astolfo: 'linear-gradient(140deg,#ffd7ea,#e3cdfb)',
           };
           sw.style.background = map[th] || map.dark;
         });
@@ -105,6 +107,17 @@ export const settingsApp = {
           walls.append(item);
         });
         g3.append(walls);
+
+        const pink = h('button.btn', { text: 'Deixar tudo rosa (Astolfo)', html: icon('heart') + ' Deixar tudo rosa' });
+        pink.onclick = () => {
+          setTheme('astolfo');
+          set('theme', 'astolfo');
+          setAccent({ id: 'astolfo', c: '#ec6fa9', c2: '#c39bf7' });
+          set('accent', 'astolfo');
+          setWallpaper('astolfo');
+          renderMain();
+        };
+        g3.append(h('div', { style: { marginTop: '10px' } }, pink));
 
         main.append(g1, g2, g3, row('Mover janelas com fímbria', 'Efeito de encaixe nas bordas da tela',
           toggleSwitch(store.get('settings.snap', true), (v) => set('snap', v))));
