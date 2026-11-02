@@ -60,7 +60,12 @@ export const gamesApp = {
       main.innerHTML = '';
       const stage = h('div.game-stage');
       main.append(stage);
-      try { g.mount(stage, { setBest: (v) => { if (setBest(g.id, v)) toast(`Novo recorde: ${v}`, { kind: 'ok' }); } }); }
+      try {
+        g.mount(stage, {
+          setBest: (v) => { if (setBest(g.id, v)) toast(`Novo recorde: ${v}`, { kind: 'ok' }); },
+          onClose: (fn) => api?.onClose?.(fn),
+        });
+      }
       catch (e) { stage.append(h('.empty', {}, h('b', { text: 'Erro ao iniciar o jogo' }), h('p', { text: String(e) }))); }
     }
 
@@ -72,7 +77,7 @@ export const gamesApp = {
 };
 
 /* ══════════════════ SNAKE ══════════════════ */
-function mountSnake(stage) {
+function mountSnake(stage, app = {}) {
   const size = 20, cell = 17;
   const canvas = h('canvas', { width: size * cell, height: size * cell });
   const hud = h('div.game-hud', {}, h('span', {}, 'Pontos ', h('b', { id: 'sk-score', text: '0' })),
@@ -158,9 +163,7 @@ function mountSnake(stage) {
     if (k === ' ') { e.preventDefault(); paused = !paused; }
   };
   window.addEventListener('keydown', key);
-  new MutationObserver((_, obs) => {
-    if (!canvas.isConnected) { clearInterval(timer); window.removeEventListener('keydown', key); obs.disconnect(); }
-  }).observe(document.body, { childList: true, subtree: true });
+  if (app.onClose) app.onClose(() => { clearInterval(timer); window.removeEventListener('keydown', key); });
   reset();
 }
 
@@ -301,7 +304,7 @@ function mountTTT(stage) {
 }
 
 /* ══════════════════ 2048 ══════════════════ */
-function mount2048(stage) {
+function mount2048(stage, app = {}) {
   let grid, score;
   const board = h('div', { style: {
     display: 'grid', gridTemplateColumns: 'repeat(4, 62px)', gap: '7px',
@@ -399,8 +402,7 @@ function mount2048(stage) {
     if (m) { e.preventDefault(); move(m); }
   };
   window.addEventListener('keydown', key);
-  new MutationObserver((_, obs) => { if (!board.isConnected) { window.removeEventListener('keydown', key); obs.disconnect(); } })
-    .observe(document.body, { childList: true, subtree: true });
+  if (app.onClose) app.onClose(() => window.removeEventListener('keydown', key));
   start();
 }
 

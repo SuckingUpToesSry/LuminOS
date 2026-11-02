@@ -133,7 +133,14 @@ export const wm = {
   },
 
   closeAll() {
-    [...state.wins].forEach((w) => this.close(w.id));
+    [...state.wins].forEach((w) => {
+      w.hooks.close.forEach((fn) => { try { fn(); } catch {} });
+      try { w.api?.onClose?.(); } catch {}
+      w.el.remove();
+    });
+    state.wins = [];
+    state.activeId = null;
+    bus.emit('windows-changed');
   },
 
   focus(id) {

@@ -143,7 +143,7 @@ export const chatApp = {
 export const clockApp = {
   id: 'clock', name: 'Relógio', glyph: 'clock', grad: ['#8b93a7', '#5f6a80'],
   size: { w: 400, h: 520 }, category: 'Utilidades', desktop: true, singleton: true,
-  mount(body) {
+  mount(body, api) {
     body.innerHTML = '';
     const face = h('div.clock-face');
     for (let i = 0; i < 12; i++) {
@@ -224,9 +224,9 @@ export const clockApp = {
     };
     tick();
     const iv = setInterval(tick, 1000);
-    const obs = new MutationObserver(() => { if (!host.isConnected) { clearInterval(iv); clearInterval(swTimer); obs.disconnect(); } });
-    obs.observe(document.body, { childList: true, subtree: true });
-    return {};
+    const cleanup = () => { clearInterval(iv); clearInterval(swTimer); };
+    api?.onClose?.(cleanup);
+    return { onClose: cleanup };
   },
 };
 
