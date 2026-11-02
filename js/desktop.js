@@ -18,13 +18,40 @@ const WALLPAPERS = [
   { id: 'ocean', name: 'Oceano', css: 'radial-gradient(800px 500px at 80% 10%,#1f5f8b,transparent 60%),linear-gradient(160deg,#081726,#0a2338)' },
   { id: 'paper', name: 'Papel', css: 'linear-gradient(160deg,#f7f3ec 0%,#e9e2d6 60%,#dcd3c4 100%)' },
   { id: 'rose', name: 'Rosé', css: 'linear-gradient(150deg,#2b1220 0%,#4a1f33 50%,#1a0c14 100%)' },
+  {
+    id: 'astolfo',
+    name: 'Astolfo',
+    art: 'assets/wallpapers/astolfo.svg',
+    css: 'radial-gradient(1100px 700px at 18% 8%, #ffe6f3, transparent 62%), radial-gradient(900px 620px at 88% 22%, #efe4ff, transparent 60%), radial-gradient(900px 700px at 62% 108%, #ffeef7, transparent 64%), linear-gradient(165deg, #fff8fc, #fbeaf5 58%, #f6e9ff)',
+  },
 ];
 
 export function wallpaperOptions() { return WALLPAPERS; }
 
 /* ── theme & accent ───────────────────────────────────────── */
+/* pétalas discretas do tema Astolfo (SFW, só clima) */
+function syncPetals(on) {
+  let layer = $('.petal-layer');
+  if (!on) { layer?.remove(); return; }
+  if (layer) return;
+  if (store.get('settings', {}).motion === false) return;
+  layer = h('div.petal-layer', { 'aria-hidden': 'true' });
+  for (let i = 0; i < 14; i++) {
+    const p = h('i', { style: {
+      left: (Math.random() * 100).toFixed(2) + '%',
+      animationDuration: (11 + Math.random() * 12).toFixed(1) + 's',
+      animationDelay: (-Math.random() * 18).toFixed(1) + 's',
+      transform: `scale(${(.6 + Math.random() * .8).toFixed(2)})`,
+      '--dx': ((Math.random() * 160) - 80).toFixed(0) + 'px',
+    } });
+    layer.append(p);
+  }
+  document.body.append(layer);
+}
+
 export function setTheme(id) {
   document.documentElement.dataset.theme = id;
+  syncPetals(id === 'astolfo');
   store.set('settings', { ...store.get('settings', {}), theme: id });
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', id === 'light' || id === 'sand' ? '#f4f5f8' : '#0b0d12');
   import('./notifications.js').then(({ renderPanel }) => { if (!$('#notifpanel').hidden) renderPanel(); });
@@ -45,20 +72,40 @@ export function setWallpaper(value) {
     wp.style.background = preset.css;
     wp.style.backgroundImage = '';
     wp.style.backgroundSize = '';
-    wp.classList.remove('image');
+    document.documentElement.classList.toggle('has-art', !!preset.art);
+    if (preset.art) {
+      // arte em camada própria a 30% e com cantos esfumados (ver astolfo.css)
+      wp.style.setProperty('--wp-art', `url("${preset.art}")`);
+      wp.classList.add('image', 'art');
+    } else {
+      wp.style.removeProperty('--wp-art');
+      wp.classList.remove('image', 'art');
+    }
     store.set('wallpaper', value);
   } else {
-    wp.style.background = '#0b0d12';
-    wp.style.backgroundImage = `url("${value}")`;
-    wp.style.backgroundSize = 'cover';
-    wp.style.backgroundPosition = 'center';
-    wp.classList.add('image');
+    // imagem personalizada: sempre em camada de arte a 30%, com os
+    // cantos esfumados, sobre o degradê do tema atual
+    wp.style.background = '';
+    wp.style.backgroundImage = '';
+    wp.style.backgroundSize = '';
+    wp.style.setProperty('--wp-art', `url("${value}")`);
+    wp.classList.add('image', 'art');
+    document.documentElement.classList.add('has-art');
     store.set('wallpaper', value);
   }
   const lb = $('#lock-bg');
   if (lb) {
-    if (preset) lb.style.background = preset.css;
-    else { lb.style.background = '#0b0d12'; lb.style.backgroundImage = `url("${value}")`; lb.style.backgroundSize = 'cover'; }
+    if (preset) {
+      lb.style.background = preset.css;
+      lb.style.backgroundImage = '';
+      if (preset.art) { lb.style.setProperty('--wp-art', `url("${preset.art}")`); lb.classList.add('image', 'art'); }
+      else { lb.style.removeProperty('--wp-art'); lb.classList.remove('image', 'art'); }
+    } else {
+      lb.style.background = '';
+      lb.style.backgroundImage = '';
+      lb.style.setProperty('--wp-art', `url("${value}")`);
+      lb.classList.add('image', 'art');
+    }
   }
 }
 
@@ -74,6 +121,7 @@ export function applySettings() {
   const weather = $('#btn-weather');
   if (weather) weather.hidden = s.showWeather === false;
   if (wp) setWallpaper(store.get('wallpaper', 'aurora'));
+  syncPetals((s.theme || document.documentElement.dataset.theme) === 'astolfo');
   refreshIcons();
   refreshDock();
   updateProfileChip();
@@ -361,7 +409,7 @@ function renderQuick(el) {
       }, 'shield'));
 
   const themes = h('div.qp-themes');
-  [['dark', 'Escuro', '#14171f'], ['light', 'Claro', '#fff'], ['midnight', 'Meia-noite', '#0c0f19'], ['nord', 'Nord', '#3b4252'], ['glass', 'Vidro', '#2a1f5e']]
+  [['dark', 'Escuro', '#14171f'], ['light', 'Claro', '#fff'], ['midnight', 'Meia-noite', '#0c0f19'], ['nord', 'Nord', '#3b4252'], ['glass', 'Vidro', '#2a1f5e'], ['astolfo', 'Astolfo', 'linear-gradient(140deg,#ffd7ea,#e3cdfb)']]
     .forEach(([id, nm, bg]) => {
       const b = h('button.qp-theme', { title: nm, style: { background: bg },
         class: document.documentElement.dataset.theme === id ? 'active' : '' });

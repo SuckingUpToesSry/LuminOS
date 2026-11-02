@@ -9,8 +9,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%238b9dff'/%3E%3Cstop offset='1' stop-color='%23c58bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='6' fill='white' fill-opacity='.92'/%3E%3C/svg%3E" />
 <link rel="manifest" href="assets/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="assets/icon.svg" />
-<link rel="stylesheet" href="css/style.css?v=1.0.1" />
-<link rel="stylesheet" href="css/apps.css?v=1.0.1" />
+<link rel="stylesheet" href="css/style.css?v=1.0.2" />
+<link rel="stylesheet" href="css/apps.css?v=1.0.2" />
+<link rel="stylesheet" href="css/studyhub.css?v=1.0.2" />
+<link rel="stylesheet" href="css/astolfo.css?v=1.0.2" />
 </head>
 <body>
 
@@ -203,7 +205,7 @@
     if (started || fallbackTried) return;
     fallbackTried = true;
     var s = document.createElement('script');
-    s.src = 'js/luminos.bundle.js?v=1.0.1';
+    s.src = 'js/luminos.bundle.js?v=1.0.2';
     s.onerror = function () { panel('js/main.js e js/luminos.bundle.js não puderam ser carregados (404).'); };
     document.body.appendChild(s);
   }
@@ -217,7 +219,7 @@
   });
 })();
 </script>
-<script type="module" src="js/main.js?v=1.0.1"></script>
+<script type="module" src="js/main.js?v=1.0.2"></script>
 <noscript>
   <div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0d12;color:#e9ebf2;
     font:14px system-ui,sans-serif;padding:24px;text-align:center">

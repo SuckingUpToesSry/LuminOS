@@ -5,6 +5,7 @@
 import { $, h, store, sound, accentPalette, sound as snd } from './core.js';
 import { icon } from './icons.js';
 import { initDesktop, openApp, setTheme, setAccent, applySettings, updateProfileChip } from './desktop.js';
+import { installStudyHub, toggleStudyHub } from './studyhub.js';
 
 let startedAt = 0;
 const BOOT_MSGS = [
@@ -42,7 +43,8 @@ async function boot() {
   const s = store.get('settings', {});
   document.documentElement.dataset.theme = s.theme || 'dark';
   if (s.accent) {
-    const a = accentPalette.find((x) => x.id === s.accent) || accentPalette[0];
+    const a = accentPalette.find((x) => x.id === s.accent)
+    || (s.accent === 'astolfo' ? { c: '#ec6fa9', c2: '#c39bf7' } : accentPalette[0]);
     document.documentElement.style.setProperty('--accent', a.c);
     document.documentElement.style.setProperty('--accent-2', a.c2);
   }
@@ -63,6 +65,9 @@ async function boot() {
 
   initDesktop();
   initDebugOverlay();
+
+  // Botão de pânico: a tecla "-" troca o LuminOS pelo StudyHub (e vice-versa).
+  try { installStudyHub(); } catch (e) { console.warn('[StudyHub]', e); }
   if (preBright !== 100) $('#wallpaper').style.filter = `brightness(${preBright / 100})`;
 
   if (!onboarded || !profile) {
@@ -96,7 +101,7 @@ function showSetup() {
   themeWrap.innerHTML = '';
   const themes = [
     ['dark', 'Escuro'], ['light', 'Claro'], ['midnight', 'Meia-noite'],
-    ['nord', 'Nord'], ['sand', 'Areia'], ['glass', 'Vidro'],
+    ['nord', 'Nord'], ['sand', 'Areia'], ['glass', 'Vidro'], ['astolfo', 'Astolfo'],
   ];
   themes.forEach(([id, nm]) => {
     const b = h('button.theme-pick', { type: 'button', class: id === theme ? 'active' : '' },
@@ -257,5 +262,10 @@ window.LuminOS = {
   open: (id, args) => { document.dispatchEvent(new CustomEvent('lumin:open-app', { detail: { id, args } })); },
   store,
   get version() { return '1.0.1'; },
+  study: {
+    open: () => toggleStudyHub(true),
+    close: () => toggleStudyHub(false),
+    toggle: () => toggleStudyHub(),
+  },
 };
 

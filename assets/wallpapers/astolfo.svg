@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Céu em tons pastel com nuvens e estandartes rosas">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe4f2"/>
+      <stop offset=".38" stop-color="#f7e8ff"/>
+      <stop offset=".72" stop-color="#eaf1ff"/>
+      <stop offset="1" stop-color="#fff3f9"/>
+    </linearGradient>
+    <radialGradient id="sun" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff6e2" stop-opacity=".95"/>
+      <stop offset=".55" stop-color="#ffe7c4" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ffe0c0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#ffe9f4" stop-opacity=".72"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e7f4ee"/>
+      <stop offset="1" stop-color="#d5ece2"/>
+    </linearGradient>
+    <linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1e6ff"/>
+      <stop offset="1" stop-color="#e2d4f8"/>
+    </linearGradient>
+    <linearGradient id="flag" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9dc7"/>
+      <stop offset="1" stop-color="#f2709f"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe6a8"/>
+      <stop offset="1" stop-color="#f2c66b"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="7"/></filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <ellipse cx="1180" cy="150" rx="420" ry="280" fill="url(#sun)"/>
+
+  <!-- nuvens distantes -->
+  <g fill="url(#cloud)" filter="url(#soft)">
+    <ellipse cx="300" cy="200" rx="190" ry="62"/>
+    <ellipse cx="410" cy="176" rx="130" ry="52"/>
+    <ellipse cx="196" cy="182" rx="112" ry="44"/>
+    <ellipse cx="1120" cy="300" rx="220" ry="60"/>
+    <ellipse cx="1250" cy="276" rx="140" ry="46"/>
+    <ellipse cx="700" cy="120" rx="150" ry="40"/>
+    <ellipse cx="940" cy="470" rx="200" ry="48"/>
+    <ellipse cx="180" cy="520" rx="160" ry="40"/>
+  </g>
+
+  <!-- estrelinhas / brilhos -->
+  <g fill="#ffffff" opacity=".9">
+    <path d="M520 300l7 20 20 7-20 7-7 20-7-20-20-7 20-7z"/>
+    <path d="M980 210l5 15 15 5-15 5-5 15-5-15-15-5 15-5z" opacity=".8"/>
+    <path d="M1380 420l6 17 17 6-17 6-6 17-6-17-17-6 17-6z" opacity=".75"/>
+    <path d="M260 380l4 12 12 4-12 4-4 12-4-12-12-4 12-4z" opacity=".7"/>
+    <circle cx="820" cy="330" r="4" opacity=".7"/>
+    <circle cx="1180" cy="560" r="3" opacity=".6"/>
+    <circle cx="420" cy="640" r="3" opacity=".5"/>
+  </g>
+
+  <!-- colinas -->
+  <path d="M0 720c220-70 400-40 620 10s380 40 560-18 300-52 420-16v204H0z" fill="url(#hill2)" opacity=".85"/>
+  <path d="M0 780c260-46 460-10 700 30s420 24 640-36 260-30 260-30v156H0z" fill="url(#hill)"/>
+
+  <!-- mastro + estandarte -->
+  <g>
+    <rect x="1046" y="430" width="7" height="330" rx="3.5" fill="#d9c6b8"/>
+    <circle cx="1049" cy="424" r="11" fill="url(#gold)"/>
+    <path d="M1053 452h150c14 0 24 12 20 25l-26 84c-4 13-18 20-31 15l-113-40z" fill="url(#flag)" opacity=".92"/>
+    <path d="M1053 452h150c14 0 24 12 20 25l-26 84c-4 13-18 20-31 15l-113-40z" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="3"/>
+    <path d="M1064 470h132M1070 500h126M1078 530h112" stroke="#ffffff" stroke-opacity=".38" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="1150" cy="516" r="26" fill="#fff" opacity=".28"/>
+    <path d="M1150 498l6 12 13 2-9.5 9 2.3 13-11.8-6.3-11.8 6.3 2.3-13-9.5-9 13-2z" fill="#fff6df" opacity=".85"/>
+  </g>
+
+  <!-- laço solto -->
+  <g opacity=".55" filter="url(#soft2)" transform="translate(300 300) rotate(-12)">
+    <path d="M0 0c-26-34-80-40-96-6-16 34 32 56 96 6z" fill="#ffb3d2"/>
+    <path d="M0 0c26-34 80-40 96-6 16 34-32 56-96 6z" fill="#ffb3d2"/>
+    <circle cx="0" cy="0" r="13" fill="#ffd0e3"/>
+  </g>
+
+  <!-- borboletas -->
+  <g fill="#ffffff" opacity=".7">
+    <g transform="translate(720 560) rotate(-14)">
+      <path d="M0 0c-16-22-42-24-46-2-4 22 26 26 46 2z"/>
+      <path d="M0 0c16-22 42-24 46-2 4 22-26 26-46 2z"/>
+    </g>
+    <g transform="translate(880 420) rotate(10) scale(.7)">
+      <path d="M0 0c-16-22-42-24-46-2-4 22 26 26 46 2z"/>
+      <path d="M0 0c16-22 42-24 46-2 4 22-26 26-46 2z"/>
+    </g>
+  </g>
+
+  <!-- vinheta suave -->
+  <rect width="1600" height="900" fill="none"/>
+</svg>

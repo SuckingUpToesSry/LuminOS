@@ -1,0 +1,157 @@
+/* ============================================================
+   LuminOS — "Astolfo" aesthetic (SFW)
+
+   Apenas PALETA + CLIMA: rosa pastel, lilás, pérola e um dourado
+   suave, inspirados em estandartes cor-de-rosa, laços e céu de
+   primavera. Nenhum conteúdo explícito — é só uma tema bonito.
+   ============================================================ */
+
+/* ── tema completo ────────────────────────────────────────── */
+html[data-theme="astolfo"]{
+  --bg: #fdf8fb;
+  --bg-2: #f9eef5;
+  --surface: #ffffff;
+  --surface-2: #fdf5fa;
+  --surface-3: #f8e9f3;
+
+  --glass: rgba(255, 250, 253, .80);
+  --glass-2: rgba(255, 252, 254, .93);
+
+  --line: rgba(154, 74, 120, .13);
+  --line-strong: rgba(154, 74, 120, .24);
+
+  --text: #2b1a26;
+  --text-2: #6d4c60;
+  --text-3: #9d7e91;
+
+  --shadow: 0 22px 52px -18px rgba(155, 78, 122, .30), 0 2px 8px rgba(120, 60, 96, .07);
+  --shadow-sm: 0 8px 22px -12px rgba(155, 78, 122, .28);
+
+  --tint: rgba(154, 74, 120, .06);
+
+  --ok: #34a889;
+  --warn: #d1892f;
+  --danger: #d94f6d;
+
+  --accent: #ec6fa9;
+  --accent-2: #c39bf7;
+  --accent-ink: #ffffff;
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --radius-lg: 26px;
+
+  --wallpaper: radial-gradient(1100px 700px at 18% 8%, #ffe6f3, transparent 62%),
+               radial-gradient(900px 620px at 88% 22%, #efe4ff, transparent 60%),
+               radial-gradient(900px 700px at 62% 108%, #ffeef7, transparent 64%),
+               linear-gradient(165deg, #fff8fc, #fbeaf5 58%, #f6e9ff);
+}
+
+/* ── acabamento: cantos suaves, laços de luz e traço rosa ─── */
+html[data-theme="astolfo"] body{
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(255, 224, 240, .55), transparent 70%),
+    var(--bg);
+}
+html[data-theme="astolfo"] .wallpaper-shade{
+  background:
+    radial-gradient(120% 95% at 50% 0%, transparent 46%, rgba(150, 80, 120, .10) 100%),
+    radial-gradient(60% 40% at 8% 100%, rgba(236, 111, 169, .10), transparent 70%);
+}
+html[data-theme="astolfo"] .topbar{
+  background: linear-gradient(180deg, rgba(255, 252, 254, .92), rgba(255, 246, 251, .82));
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 6px 20px -16px rgba(155, 78, 122, .6);
+}
+html[data-theme="astolfo"] .dock{
+  background: linear-gradient(180deg, rgba(255, 251, 254, .88), rgba(252, 241, 249, .92));
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 44px -22px rgba(155, 78, 122, .55), 0 1px 0 rgba(255, 255, 255, .9) inset;
+}
+html[data-theme="astolfo"] .win{
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+html[data-theme="astolfo"] .win-bar{
+  background: linear-gradient(180deg, rgba(255, 251, 254, .96), rgba(253, 244, 250, .92));
+  border-bottom: 1px solid var(--line);
+}
+html[data-theme="astolfo"] .desk-icon .ico,
+html[data-theme="astolfo"] .dock-item .ico{
+  box-shadow: 0 8px 22px -12px rgba(155, 78, 122, .55), 0 0 0 1px rgba(255, 255, 255, .55) inset;
+}
+html[data-theme="astolfo"] .btn.primary{
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 24px -12px rgba(236, 111, 169, .8);
+}
+html[data-theme="astolfo"] .chip{
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+html[data-theme="astolfo"] .boot{
+  background:
+    radial-gradient(700px 420px at 50% 30%, rgba(255, 225, 242, .9), transparent 70%),
+    linear-gradient(165deg, #fffafd, #f8ebf5);
+}
+
+/* ── papel de parede de arte (imagem com opacidade) ───────── */
+/* A imagem entra em ::after com 30% de opacidade e cantos
+   esfumados, então o degradê continua por baixo e nada fica
+   "lavado". Funciona em qualquer tema que use .art. */
+html[data-theme="astolfo"] .wallpaper.art{
+  position: absolute;
+}
+.wallpaper.art::after,
+#lock-bg.art::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--wp-art);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--wp-art-opacity, .3);
+  /* cantos esfumados: a arte se dissolve nas bordas */
+  -webkit-mask-image:
+    radial-gradient(115% 105% at 50% 45%, #000 34%, rgba(0, 0, 0, .55) 66%, transparent 100%);
+  mask-image:
+    radial-gradient(115% 105% at 50% 45%, #000 34%, rgba(0, 0, 0, .55) 66%, transparent 100%);
+  pointer-events: none;
+}
+
+
+/* ── partículas de pétala (leves, opcionais) ─────────────── */
+html[data-theme="astolfo"] .petal-layer{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.petal-layer i{
+  position: absolute;
+  top: -24px;
+  width: 9px;
+  height: 9px;
+  border-radius: 60% 40% 55% 45%;
+  background: linear-gradient(140deg, #ffc4dd, #ef9dc4);
+  opacity: .55;
+  animation: petal-fall linear infinite;
+  filter: blur(.2px);
+}
+@keyframes petal-fall{
+  0%   { transform: translate3d(0, -30px, 0) rotate(0deg); opacity: 0; }
+  12%  { opacity: .6; }
+  100% { transform: translate3d(var(--dx, 30px), 104vh, 0) rotate(420deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce){
+  .petal-layer{ display: none; }
+}
+body.no-motion .petal-layer{ display: none; }
+
+/* ── mobile / densidade ──────────────────────────────────── */
+@media (max-width: 700px){
+  html[data-theme="astolfo"]{ --radius: 16px; --radius-lg: 22px; }
+}

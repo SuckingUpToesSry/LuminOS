@@ -11,6 +11,7 @@
 import { browserApp } from './apps/browser.js';
 import { notesApp } from './apps/notes.js';
 import { aiApp } from './apps/ai.js';
+import { arcadeApp } from './apps/arcade.js';
 import { gamesApp } from './apps/games.js';
 import { soundboardApp, musicApp, photosApp } from './apps/media.js';
 import { storeApp } from './apps/store.js';
@@ -26,7 +27,7 @@ export const version = '1.0.1';
 /** Só é chamada em tempo de execução (pós-avaliação dos módulos). */
 function appList() {
   return [
-    browserApp, notesApp, aiApp, gamesApp, soundboardApp, musicApp, photosApp,
+    browserApp, notesApp, aiApp, arcadeApp, gamesApp, soundboardApp, musicApp, photosApp,
     storeApp, settingsApp, filesApp, terminalApp, calculatorApp, paintApp,
     codeApp, creatorApp, chatApp, clockApp, calendarApp, cameraApp, linksApp,
     feedbackApp, aboutApp,
