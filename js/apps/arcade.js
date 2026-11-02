@@ -134,17 +134,37 @@ export const arcadeApp = {
       }
     }
 
+    /* capa (banner) do jogo: tenta os espelhos jsDelivr em sequência e cai
+       num cartão com degradê + iniciais se nenhum responder */
+    const COVER_OK = new Set();   // espelhos que já funcionaram nesta sessão
+    function coverArt(entry) {
+      const box = h('div.cover', { style: { height: '88px', overflow: 'hidden', position: 'relative' } });
+      const art = h('div.cover-art');
+      const hue = [...String(entry.name || entry.key)].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+      art.style.background = `linear-gradient(140deg, hsl(${hue} 62% 46%), hsl(${(hue + 44) % 360} 58% 34%))`;
+      art.append(h('span.cover-ini', { text: (entry.name || '?').slice(0, 1).toUpperCase() }));
+      box.append(art);
+
+      const urls = entry.thumb && !entry.thumb.startsWith('http') ? coverUrls(entry.thumb) : (entry.thumb ? [entry.thumb] : []);
+      if (urls.length) {
+        // ordena pelos espelhos já confirmados
+        urls.sort((a, b) => (COVER_OK.has(mirrorOf(b)) ? 1 : 0) - (COVER_OK.has(mirrorOf(a)) ? 1 : 0));
+        const img = h('img', { loading: 'lazy', alt: entry.name, decoding: 'async' });
+        let i = 0;
+        img.onload = () => { COVER_OK.add(mirrorOf(urls[i])); img.classList.add('in'); art.classList.add('has-img'); };
+        img.onerror = () => { i++; if (i < urls.length) img.src = urls[i]; else img.remove(); };
+        img.src = urls[0];
+        box.append(img);
+      }
+      return box;
+    }
+    function mirrorOf(u) {
+      try { const x = new URL(u); return x.host + x.pathname.slice(0, x.pathname.lastIndexOf('/') + 1); } catch { return u; }
+    }
+
     function card(entry) {
       const fav = favs().some((x) => x.key === entry.key);
-      const cover = h('div.cover', { style: { height: '82px', overflow: 'hidden', position: 'relative' } });
-      if (entry.thumb) {
-        const img = h('img', {
-          src: entry.thumb, loading: 'lazy', alt: entry.name,
-          style: { width: '100%', height: '100%', objectFit: 'cover' },
-        });
-        img.onerror = () => { img.remove(); cover.append(h('span', { style: { fontSize: '26px' }, text: '🎮' })); };
-        cover.append(img);
-      } else cover.append(h('span', { style: { fontSize: '26px' }, text: '🎮' }));
+      const cover = coverArt(entry);
 
       const el = h('div.store-card', { style: { cursor: 'pointer' } },
         cover,
@@ -174,7 +194,16 @@ export const arcadeApp = {
         }));
         total = res.total; pages = res.pages;
         // capas resolvidas em paralelo (blob URLs)
-        items.forEach((it) => { imageUrl(it.image_token).then((u) => { if (u && it.el) it.el.querySelector('img')?.setAttribute('src', u); }); });
+        // capas do LuminSDK chegam por blob URL depois do render
+        items.forEach((it) => {
+          imageUrl(it.image_token).then((u) => {
+            if (!u || !it.el) return;
+            const box = it.el.querySelector('.cover');
+            const img = h('img', { src: u, alt: it.name, loading: 'lazy', decoding: 'async' });
+            img.onload = () => { img.classList.add('in'); box.querySelector('.cover-art')?.classList.add('has-img'); };
+            box.append(img);
+          }).catch(() => {});
+        });
         renderGrid();
       } catch (err) {
         grid.innerHTML = '';
@@ -207,7 +236,7 @@ export const arcadeApp = {
       list = list.slice((page - 1) * limit * 2, page * limit * 2);
       items = list.map((g) => ({
         key: 'gn:' + g.i, source: 'GN-Math', name: g.n, cat: (g.t || []).join(','),
-        note: g.a || '', f: g.f, c: g.c, kind: 'gn',
+        note: (g.t || []).join(' · ') || (g.a || ''), f: g.f, c: g.c, thumb: g.c || null, kind: 'gn',
       }));
       loading = false;
       renderGrid();
@@ -357,7 +386,7 @@ export const arcadeApp = {
       } else {
         if (!gnCache) { await loadGnMath(); }
         const g = gnCache[Math.floor(Math.random() * gnCache.length)];
-        if (g) openEntry({ key: 'gn:' + g.i, kind: 'gn', name: g.n, f: g.f, c: g.c, source: 'GN-Math', note: (g.t || []).join(',') });
+        if (g) openEntry({ key: 'gn:' + g.i, kind: 'gn', name: g.n, f: g.f, c: g.c, thumb: g.c, source: 'GN-Math', note: (g.t || []).join(',') });
       }
     }
 
@@ -383,6 +412,15 @@ export const arcadeApp = {
     render();
 
     // atalhos fixos do usuário (GN-Math) no rodapé da aba GN-Math
+    // botão de pânico também dentro do app de Jogos
+    window.__luminPanic = () => import('../studyhub.js').then(({ toggleStudyHub }) => toggleStudyHub());
+    /* estado exposto enquanto o player está aberto */
+    window.__luminGame = {
+      get playing() { return player.style.display !== 'none'; },
+      close: () => closePlayer(),
+      pause() { try { frame.contentWindow?.blur?.(); } catch {} },
+    };
+
     // atalho: "Clássicos" abre uma janela própria com os jogos locais
     document.addEventListener('lumin:open-classic', (e) => {
       const gid = e.detail?.game;

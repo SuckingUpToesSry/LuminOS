@@ -261,7 +261,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 window.LuminOS = {
   open: (id, args) => { document.dispatchEvent(new CustomEvent('lumin:open-app', { detail: { id, args } })); },
   store,
-  get version() { return '1.0.1'; },
+  get version() { return '1.1.0'; },
   study: {
     open: () => toggleStudyHub(true),
     close: () => toggleStudyHub(false),
