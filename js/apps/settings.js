@@ -6,6 +6,7 @@ import { h, store, sound, accentPalette, isMac, modKey } from '../core.js';
 import { icon } from '../icons.js';
 import { toggleSwitch, modal, toast, confirmDialog } from '../ui.js';
 import { setTheme, setAccent, setWallpaper, wallpaperOptions, resetUserdata } from '../desktop.js';
+import * as proxy from '../proxy.js';
 import { version } from '../registry.js';
 
 const SECTIONS = [
@@ -65,9 +66,27 @@ export const settingsApp = {
 
       if (section === 'appearance') {
         main.append(h('h2', { text: 'Aparência' }), h('p.sub', { text: 'Tema, cor de destaque e papel de parede.' }));
+        const cur = document.documentElement.dataset.theme;
+
+        /* ── destaque: tema Astolfo (rosa pastel, SFW) ───────── */
+        const hero = h('button.as-hero', { class: cur === 'astolfo' ? 'on' : '' },
+          h('span.as-art', { style: { backgroundImage: "url('assets/wallpapers/astolfo.svg')" } }),
+          h('span.as-txt', {},
+            h('b', { text: 'Astolfo' }),
+            h('span', { text: 'Rosa pastel, cantos esfumados, pétalas discretas — arte de fundo a 30% de opacidade.' })),
+          h('span.as-go', { html: icon('spark') }));
+        hero.onclick = () => {
+          setTheme('astolfo');
+          set('theme', 'astolfo');
+          setAccent({ id: 'astolfo', c: '#ec6fa9', c2: '#c39bf7' });
+          set('accent', 'astolfo');
+          setWallpaper('astolfo');
+          renderMain();
+        };
+        main.append(hero);
+
         const g1 = h('div.set-group', {}, h('h3', { text: 'Tema' }));
         const cards = h('div.theme-cards');
-        const cur = document.documentElement.dataset.theme;
         THEMES.forEach((t) => {
           const c = h('button.theme-card', { class: t.id === cur ? 'active' : '' },
             h('div.sw', { dataset: { theme: t.id } }),
@@ -101,8 +120,12 @@ export const settingsApp = {
         const g3 = h('div.set-group', {}, h('h3', { text: 'Papel de parede' }));
         const walls = h('div.wall-list');
         wallpaperOptions().forEach((w) => {
-          const item = h('button.wall-item', { class: store.get('wallpaper', 'aurora') === w.id ? 'active' : '' },
-            h('i', { style: { background: w.css } }));
+          const item = h('button.wall-item', { class: store.get('wallpaper', 'aurora') === w.id ? 'active' : '', title: w.name },
+            h('i', {
+              style: w.art
+                ? { background: `linear-gradient(rgba(255,255,255,.62), rgba(255,255,255,.62)), url('${w.art}') center/cover no-repeat, ${w.css}` }
+                : { background: w.css },
+            }));
           item.onclick = () => { setWallpaper(w.id); renderMain(); };
           walls.append(item);
         });
@@ -119,7 +142,11 @@ export const settingsApp = {
         };
         g3.append(h('div', { style: { marginTop: '10px' } }, pink));
 
-        main.append(g1, g2, g3, row('Mover janelas com fímbria', 'Efeito de encaixe nas bordas da tela',
+        main.append(g1, g2, g3,
+          h('div.set-group', {}, h('h3', { text: 'StudyHub (botão de pânico)' }),
+            row('Abrir o StudyHub', 'Aperte a tecla - em qualquer lugar do sistema',
+              h('button.btn.primary', { html: icon('spark') + ' Abrir StudyHub', onclick: () => import('../studyhub.js').then(({ toggleStudyHub }) => toggleStudyHub(true)) }))),
+          row('Mover janelas com fímbria', 'Efeito de encaixe nas bordas da tela',
           toggleSwitch(store.get('settings.snap', true), (v) => set('snap', v))));
       }
 
@@ -170,30 +197,46 @@ export const settingsApp = {
       }
 
       if (section === 'browser') {
-        const bs = store.get('browser.settings', { engine: 'duck', proxy: 'none', home: '' });
-        const setB = (k, v) => { const cur = store.get('browser.settings', {}); cur[k] = v; store.set('browser.settings', cur); };
+        const cfg = proxy.settings();
         const eng = h('select.select', {},
-          ...[['duck', 'DuckDuckGo'], ['google', 'Google'], ['bing', 'Bing'], ['brave', 'Brave'], ['wiki', 'Wikipedia']]
-            .map(([v, t]) => h('option', { value: v, text: t })));
-        eng.value = bs.engine;
-        eng.onchange = () => setB('engine', eng.value);
-        const prox = h('select.select', {},
-          ...[['none', 'Sem proxy (direto)'], ['allorigins', 'AllOrigins'], ['corsproxy', 'corsproxy.io'], ['codetabs', 'CodeTabs'], ['thingproxy', 'thingproxy']]
-            .map(([v, t]) => h('option', { value: v, text: t })));
-        prox.value = bs.proxy;
-        prox.onchange = () => setB('proxy', prox.value);
-        const home = h('input.input', { placeholder: 'https://exemplo.com', value: bs.home });
-        home.onchange = () => setB('home', home.value.trim());
-        main.append(h('h2', { text: 'Navegador' }), h('p.sub', { text: 'Motor de busca, página inicial e proxy.' }));
+          ...proxy.ENGINES.map((e) => h('option', { value: e.id, text: e.name, selected: e.id === cfg.engine })));
+        eng.onchange = () => proxy.save({ engine: eng.value });
+
+        const proto = h('select.select', {},
+          ...proxy.PROTOCOLS.map((p) => h('option', { value: p.id, text: p.name, selected: p.id === cfg.protocol })),
+          h('option', { value: 'none', text: 'Direto (sem proxy)', selected: cfg.protocol === 'none' }));
+        proto.onchange = () => proxy.save({ protocol: proto.value });
+
+        const trans = h('select.select', {},
+          ...proxy.TRANSPORTS.map((t) => h('option', { value: t.id, text: t.name, selected: t.id === cfg.transport })));
+        trans.onchange = () => { proxy.save({ transport: trans.value }); proxy.resetUV(); proxy.resetScramjet(); };
+
+        const wisp = h('select.select', {},
+          ...proxy.WISP_ENDPOINTS.map((w) => h('option', { value: w, text: new URL(w).host, selected: w === cfg.wisp })));
+        wisp.onchange = () => { proxy.save({ wisp: wisp.value }); proxy.resetUV(); proxy.resetScramjet(); };
+
+        const home = h('input.input', { placeholder: 'https://exemplo.com', value: cfg.homepage || '' });
+        home.onchange = () => proxy.save({ homepage: home.value.trim() });
+
+        main.append(h('h2', { text: 'Navegador' }), h('p.sub', { text: 'Protocolo, transporte, relay, motor de busca e página inicial.' }));
         main.append(
+          row('Protocolo', 'Scramjet (recomendado) ou Ultraviolet', proto),
+          row('Transporte', 'Epoxy, Libcurl ou Bare (Wisp puro)', trans),
+          row('Relay Wisp', 'Servidor usado para falar com os sites', wisp),
           row('Motor de busca', 'Usado quando você digita um termo', eng),
-          row('Proxy padrão', 'Contorna bloqueios de iframe em alguns sites', prox),
-          row('Página inicial', 'Abrir ao clicar em Início', home),
-          row('Limpar dados de navegação', `Histórico: ${(store.get('browser.history', []) || []).length} itens`,
-            h('button.btn.danger', { text: 'Limpar', onclick: () => confirmDialog({ title: 'Limpar histórico?', danger: true, ok: 'Limpar', onOk: () => { store.set('browser.history', []); toast('Histórico limpo', { kind: 'ok' }); renderMain(); } }) })),
-          row('Favoritos', `${(store.get('browser.bookmarks', []) || []).length} salvos`,
-            h('button.btn', { text: 'Gerenciar', onclick: () => manageBookmarks() })),
+          row('Página inicial', 'Abrir ao criar uma nova aba', home),
+          row('Sugestões de busca', 'Sugestões do motor na barra de endereço',
+            toggleSwitch(cfg.suggestions, (v) => proxy.save({ suggestions: v }))),
+          row('Partículas', 'Fundo animado na página inicial do navegador',
+            toggleSwitch(cfg.particles, (v) => proxy.save({ particles: v }))),
+          row('Reparar proxy', 'Reinicia service workers e transportes',
+            h('button.btn', { html: icon('wand') + ' Repair', onclick: () => {
+              proxy.resetUV(); proxy.resetScramjet();
+              proxy.runtime.stats.errors = 0; proxy.runtime.stats.lastError = '';
+              import('../ui.js').then(({ toast }) => toast('Proxy reiniciado', { kind: 'ok' }));
+            } })),
         );
+        return;
       }
 
       if (section === 'ai') {

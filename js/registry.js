@@ -22,7 +22,7 @@ import { chatApp, clockApp, calendarApp } from './apps/social.js';
 import { cameraApp, linksApp, feedbackApp } from './apps/extras.js';
 import { webAppMount, aboutApp } from './apps/webapp.js';
 
-export const version = '1.0.1';
+export const version = '1.1.0';
 
 /** Só é chamada em tempo de execução (pós-avaliação dos módulos). */
 function appList() {

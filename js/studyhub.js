@@ -104,8 +104,13 @@ export function isStudyMode() { return active; }
 export function toggleStudyHub(force) {
   const next = force === undefined ? !active : !!force;
   if (next === active) return active;
+
+  // se o container não existe (boot interrompido), recria na hora
+  let root = $('#studyhub');
+  if (!root) { try { installStudyHub(); root = $('#studyhub'); } catch (err) { console.warn('[StudyHub]', err); } }
+  if (!root) { console.warn('[StudyHub] container indisponível'); return active; }
+
   active = next;
-  const root = $('#studyhub');
   document.body.classList.toggle('study-mode', active);
 
   if (active) {
@@ -115,8 +120,8 @@ export function toggleStudyHub(force) {
     sessionStart = Date.now();
     root.hidden = false;
     root.classList.add('in');
-    renderApp();
-    chatStart('estudos');
+    try { renderApp(); } catch (err) { console.warn('[StudyHub] render', err); }
+    try { chatStart('estudos'); } catch {}
     sound.tone({ freq: 520, dur: .09, gain: .06, type: 'sine' });
     store.set('studyhub.sessions', (store.get('studyhub.sessions', 0) || 0) + 1);
   } else {
@@ -558,9 +563,10 @@ export function installStudyHub() {
   document.addEventListener('keydown', (e) => {
     // Botão "-" (menos) — também aceita "_" (shift + -) e o teclado numérico
     const isMinus = e.key === '-' || e.code === 'Minus' || e.code === 'NumpadSubtract' || e.key === '_';
-    if (isMinus && !isTyping() && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const wantToggle = isMinus && !e.ctrlKey && !e.metaKey && !e.altKey && (active || !isTyping());
+    if (wantToggle) {
       e.preventDefault();
-      toggleStudyHub();
+      try { toggleStudyHub(); } catch (err) { console.warn('[StudyHub] toggle', err); }
       return;
     }
     // atalhos alternativos

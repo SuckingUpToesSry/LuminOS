@@ -12,10 +12,10 @@
 
 | App | O que faz |
 | --- | --- |
-| **LuminBrowser** | Abas, histórico, favoritos, motor de busca configurável e **modo proxy** para abrir sites que bloqueiam iframe |
+| **LuminBrowser** | Abas, histórico, favoritos e **proxy real**: Scramjet ou Ultraviolet com transporte Epoxy, Libcurl ou Bare, painel de configurações e Chat Global |
 | **Notas** | Editor com autosave, busca, fixar, exportar `.md` |
 | **LuminAI** | Assistente offline (motor local) ou conectado a qualquer endpoint compatível com OpenAI/Ollama |
-| **Jogos** | Serpente, Memória, Jogo da Velha (IA), 2048, Reflexo, Campo Minado, Simon |
+| **Jogos** | Catálogo LuminSDK + 848 jogos GN-Math com capas, favoritos, e os clássicos (Serpente, Memória, 2048, Campo Minado, Simon…) |
 | **Música** | Sequenciador generativo com Web Audio — 5 “faixas” infinitas |
 | **Soundboard** | 16 pads sintetizados em tempo real (nada de arquivos de áudio) |
 | **Paint** | Pincel, borracha, formas, exportar PNG, usar como papel de parede |
@@ -160,3 +160,28 @@ no lugar de um `.js`, que era o que antes travava o boot.
 ## 📄 Licença
 
 MIT. Use, fork, modifique e publique.
+
+
+---
+
+## 🔐 Proxy do navegador (Scramjet / Ultraviolet)
+
+O app Navegador abre sites de verdade — nada de iframe bloqueado:
+
+| Camada | Opções |
+| --- | --- |
+| **Protocolo** | `Scramjet` (padrão, reescreve tudo no próprio site) · `Ultraviolet` (SW clássico) · direto |
+| **Transporte** | `Epoxy` (TLS em WASM) · `Libcurl` (libcurl.js, WASM embutido) · `Bare` (Wisp puro) |
+| **Relay Wisp** | `wisp.mercurywork.shop` · `bare-server.fly.dev` · `wisp.terbiumon.top` · `wisp.drlongass.xyz` |
+
+- Tudo é vendorizado em `scramjet/` e `uv/` (nenhum CDN externo em tempo de execução).
+- O `sw.js` da raiz hospeda o controller do Scramjet (escopo da página) e o `uv/sw.js` cuida do Ultraviolet em escopo próprio.
+- Configuração em **Configurações → Navegador** ou no painel do próprio navegador (Transport / Protocol / Search engine / Homepage / Search suggestions / Particles / **Clear History** / **Repair**).
+
+## 🎀 Tema Astolfo (SFW)
+
+Tema `astolfo` em `css/astolfo.css`: rosa pastel + lilás, cantos mais suaves, pétalas discretas e papel de parede de arte a **30% de opacidade** com cantos esfumados (`mask-image`). Arte original em `assets/wallpapers/astolfo.svg`. Aplica tudo em **Configurações → Aparência → Astolfo**.
+
+## ⌨️ Botão de pânico
+
+Aperte `-` em qualquer lugar do sistema: o LuminOS vira o **StudyHub** (logotipo próprio, quizzes com explicação, materiais e Chat Global). Aperte `-` de novo para voltar. `Shift+D` também sai; `TripleTHD`-style “discreet mode” transforma o StudyHub num portal escolar.
